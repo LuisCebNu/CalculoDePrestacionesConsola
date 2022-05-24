@@ -1,0 +1,533 @@
+﻿using System;
+using System.Linq;
+
+namespace CalculoDePrestacionesConsola
+{
+    class Program
+    {
+         /*
+          TODO: Reorgnizar todo el codigo
+          */
+        private static int screenWidth = Console.LargestWindowWidth;
+        private static int screenHeight = Console.LargestWindowHeight;
+        
+        static void Main(string[] args)
+        {
+            
+           
+            
+            Console.Title = "CÁLCULO DE PRESTACIONES Y DERECHOS ADQUIRIDOS";
+            Console.SetWindowSize(screenWidth-20, screenHeight/2);
+            Console.WriteLine("¡Bienvenido a la aplicacion de calculo de prestaciones!");
+            //Date date = new Date();
+            (DateTime entry, DateTime exit) = FechasDeSalidaYEntrada();
+            int Years = YearsWorking(entry, exit);
+            int Months = MonthsWorking(entry, exit, Years);
+            double Days = DaysWorking(entry, exit, Months);
+            int time;
+            if (Years == 0)
+            {
+                if (Months == 0)
+                {
+                    time = 1;
+                }
+                else
+                {
+                    time = Months;
+                }
+            }
+            else
+            {
+                time = 12;
+            }
+            string TotalTime = TotalTimeWorking(Months, Days, Years);
+            (int Periodo, int TCalculo) = CalculoYPeriodo();
+            (double Sumatoria, double PromedioMensual, double PromedioDiario) = SalariesCal(time, Periodo, TCalculo, Days);
+
+           double TotalPay= MoneyToBePay(time == 12 && Years == 1 ? 12 : time + Years, PromedioDiario, Months, Days, TCalculo, entry);
+
+            Console.WriteLine(TotalTime);
+            Console.WriteLine($"Total a recibir: {TotalPay:C2}");
+            Console.ReadKey();
+        }
+
+        public static (DateTime,DateTime) FechasDeSalidaYEntrada()
+        {
+            DateTime entry = DateTime.Now;
+            DateTime exit = DateTime.Now;
+            string input = "";
+            Console.WriteLine("Seleccion de Fechas");
+            Console.WriteLine("La fechas de entrada y salida deben ser escritas en el formato Dia/Mes/Año o Dia-Mes-Año");
+            Console.WriteLine("Por favor inserte la fecha de entrada: ");
+            input = Console.ReadLine();
+            entry = DateTime.Parse(input);
+            Console.WriteLine("Por favor inserte la fecha de salida: ");
+            input = Console.ReadLine();
+            exit = DateTime.Parse(input);
+            return (entry, exit);
+        }
+
+        /*Años. Se le resta al año de salida el año de entrada
+          Se le resta 1 por que el computador añade el año inicial como
+          un año más*/
+        static int YearsWorking(DateTime entry, DateTime exit)
+        { 
+            int Years = new DateTime(exit.Subtract(entry).Ticks).Year - 1;
+            return Years;
+        }
+
+        /*Meses. Se le suman los años medios y se van agregando
+           meses hasta que sean iguales o mayor a los meses del
+           año de salida.*/
+        static int MonthsWorking(DateTime entry, DateTime exit,int Years)
+        {
+            DateTime PastYears = entry.AddYears(Years);
+            int Months = 0;
+            for (int i = 1; i <= 12; i++)
+            {
+                if (PastYears.AddMonths(i) == exit)
+                {
+                    Months = i;
+                    break;
+                }
+                else if (PastYears.AddMonths(i) >= exit)
+                {
+                    Months = i - 1;
+                    break;
+                }
+            }
+            return Months;
+        }
+
+        /*Days. Se agregan los meses que pasaron entre ambas fechas a
+          la entrada, se le resta todo a la salida, se tranforma a dias
+          y se le suma para que sea exacto.*/
+
+        static double DaysWorking(DateTime entry, DateTime exit, int Months)
+        {
+            double Days = exit.Subtract(entry.AddMonths(Months)).Days + 1;
+
+            while (Days > 30.42)
+            {
+                Days = Math.Round(Days / 30.42) - 12;
+            }
+            return Days;
+        }
+
+        //Seleccion de periodo y tipo de calculo
+        static (int,int) CalculoYPeriodo()
+        {
+            int Periodo = 1;
+            int Calculo = 1;
+            Console.WriteLine("Frecuencia de pago");
+            Console.WriteLine("Seleccione el período: ");
+            Console.WriteLine(@"
+             (1) Mensual        (2)Quincenal
+             (3) Semanal        (4) Diario");
+            Periodo = int.Parse(Console.ReadLine());
+            Console.WriteLine("Seleccione el tipo de cálculo: ");
+            Console.WriteLine(@"
+             (1) Ordinario        (2)Intermitente");
+            Console.WriteLine(@"
+             Jornada ordinaria es la ejecutada por trabajadores dentro de un período que no exceda 
+             de ocho (8) horas al día ni de cuarenta y cuatro (44) a la semana. 
+               
+             Referencia Art.147 del codigo de trabajo");
+
+            Console.WriteLine(@"
+             Jornada intermitente es la ejecutada por trabajadores que requieren su sola presencia 
+             en el lugar de trabajo, los cuales pudieran laborar consecuentemente por un periodo 
+             de hasta diez (10) horas diarias. Estos trabajadores son: los porteros, 
+             los ascensoristas, los serenos, los guardianes, los conserjes, los barberos, 
+             los sastres, los empleados de bombas para el expendio de gasolina, los capataces, 
+             los mozos de cafés y restaurantes, las manicuristas, los camareros, los trabajadores 
+             ocupados en vehículos de transporte terrestre que presten servicios intermitentes o entre dos 
+             o más municipios y los trabajadores del campo.
+                
+             Referencias: resolución 04/93 del Ministerio de Trabajo, sobre trabajadores 
+             que ejecutan labores intermitentes, arts. 281, 284 y 285 del Código de Trabajo 
+             y art. 78 del Reglamento 258/93 para la aplicación del Código de Trabajo.");
+            Calculo = int.Parse(Console.ReadLine());
+            return (Periodo, Calculo);
+        }
+
+        //Tiempo de trabajo total
+        static string TotalTimeWorking(int Months, double Days, int Years)
+        {
+            switch (Years)
+            {
+                case (0):
+                    if (Months == 0)
+                    {
+                        return $"Tiempo laborado: {Days} dias";
+                        
+                    }
+                    return $"Tiempo laborado: {Months} meses, y {Days} dias";
+                default:
+                    if (Months == 0)
+                    {
+                        return $"Tiempo laborado: {Years} años y {Days} dias";
+
+                    }
+                    return $"Tiempo laborado: {Years} años, {Months} meses, y {Days} dias";
+            }
+            
+        }
+
+        //Tabla de salarios
+        static (double,double,double) SalariesCal(int time, int periodo, int calculo, double days)
+        {
+            double[] Salaries = new double[time];
+            double[] Comisions = new double[time];
+            double[] totals = new double[time];
+            if (days >= 30)
+            {
+                Salaries = new double[time+1];
+                Comisions = new double[time+1];
+                totals = new double[time+1];
+            }
+            
+
+            double salariesSum = 0.0;
+            double promMonthly = 0.0;
+            double promDaily = 0.0;
+            Console.Clear();
+            Console.WriteLine(@"
+             Para que el cálculo de las prestaciones laborales y derechos adquiridos 
+             esté conforme a la normativa laboral,debe colocar su salario correspondiente 
+             al último año de servicios prestados en orden de antigüedad, siendo 
+             el número 1 el salario más antiguo y el número 12 el salario más reciente. 
+             Esto así porque derechos como el de las vacaciones deben ser calculados en base 
+             a la remuneración habitual, en cuyo caso tomaremos el salario reportado en el último mes. 
+             
+             Referencia: Art. 181 del Código de Trabajo.");
+
+            //Salarios
+            for (int i = 0; i < Salaries.Length; i++)
+            {
+                Console.Write( $"{i+1}. salario: ");
+                Salaries[i] = double.Parse(Console.ReadLine());
+                Console.WriteLine();
+                if (time > 1)
+                {
+                    int input = 0;
+                    if (i+1 < Salaries.Length)
+                    {
+                        Console.Write("¿Deseas autocompletar desde este punto? 1)Si 2) No: ");
+                        input = int.Parse(Console.ReadLine());
+                    }
+                    
+                    if (input == 1)
+                    {
+                        for (int j = i+1; j < Salaries.Length - i; j++)
+                        {
+                            Salaries[j] = Salaries[i];
+                        }
+                        break;
+                    }
+                }
+            }
+
+            //Comisiones
+            for (int i = 0; i < Comisions.Length; i++)
+            {
+                Console.Write($"{i + 1}. comision: ");
+                Comisions[i] = double.Parse(Console.ReadLine());
+                Console.WriteLine();
+                if (time > 1)
+                {
+                    int input = 0;
+                    if (i + 1 < Salaries.Length)
+                    {
+                        Console.Write("¿Deseas autocompletar desde este punto? 1)Si 2) No: ");
+                        input = int.Parse(Console.ReadLine());
+                    }
+                    if (input == 1)
+                    {
+                        for (int j = i + 1; j < Comisions.Length - i; j++)
+                        {
+                            Comisions[j] = Comisions[i];
+                        }
+                        break;
+                    }
+                }
+            }
+            //Totales
+            for (int i = 0; i < totals.Length; i++)
+            {
+                totals[i] = Salaries[i] + Comisions[i];
+            }
+                
+            //Tabla
+            Console.WriteLine("# Salaries  Comisiones  Totales");
+            for (int t = 0; t < time; t++)
+            {
+                Console.WriteLine($"{t+1}  {Salaries[t]:C2}    {Comisions[t]:C2}      {totals[t]:C2}");
+            }
+            Console.ReadKey();
+            Console.Clear();
+
+            //Suma de salarios
+            salariesSum = totals.Sum();
+            //Salario promedio mensual
+            switch (periodo)
+            {
+                case 1:
+                    promMonthly = salariesSum / time;
+                    break;
+                case 2:
+                    promMonthly = (salariesSum*2) / (time);
+                    break;
+                case 3:
+                    promMonthly = (salariesSum * 4.3333) / (time);
+                    break;
+                case 4:
+                    promMonthly = (salariesSum * (calculo == 1 ? 23.83 : 26)) / (time);
+                    break;
+            }
+            //Salario promedio diarios
+            promDaily = promMonthly / (calculo == 1 ? 23.83 : 26);
+            //Resultados
+            Console.WriteLine($"Sumatoria de los salarios {salariesSum:C2}");
+            Console.WriteLine($"Salario promedio mensual {promMonthly:C2}");
+            Console.WriteLine($"Salario promedio diario {promDaily:C2}");
+            return (salariesSum, promMonthly, promDaily);
+        }
+
+        //Pago a recibir
+        static double MoneyToBePay(int time, double salario, int months, double days, int calculo,DateTime entry)
+        {
+            double moneyToPay = 0.0;
+            double ChristmaxSal = 0.00;
+            double cesantia1 = 0.00;
+            double cesantia2 = 0.00;
+            double preAvised = 0.00;
+            double vacations = 0.00;
+            int input = 0;
+            //Pre-aviso
+            Console.Write("¿Ha sido usted pre-avisado? (1)Si (2)No  ");
+            input = int.Parse(Console.ReadLine());
+            if (input == 2)
+            {
+                switch (time)
+                {
+                    case 1:
+                    case 2:
+                        break;
+                    case 3:
+                    case 4:
+                    case 5:
+                        preAvised = salario * 7;
+                            break;
+                    case 6:
+                    case 7:
+                    case 8:
+                    case 9:
+                    case 10:
+                    case 11:
+                        preAvised = salario * 14;
+                        break;
+                    default:
+                        preAvised = salario * 28;
+                        break;
+                }
+            }
+
+            //Cesantia
+            Console.Write("¿Desea cesantia? (1)Si (2)No  ");
+            input = int.Parse(Console.ReadLine());
+            if (input == 1)
+            {
+                //Art 80 C.T. antes de 1992
+                if (entry.Year < 1992)
+                {
+                    switch (time)
+                    {
+                        case 1:
+                        case 2:
+                            break;
+                        case 3:
+                        case 4:
+                        case 5:
+                            cesantia1 = salario * 6;
+                            break;
+                        case 6:
+                        case 7:
+                        case 8:
+                        case 9:
+                        case 10:
+                        case 11:
+                            cesantia1 = salario * 13;
+                            break;
+                        default:
+                            if (time < 60)
+                            {
+                                if (months == 0)
+                                {
+                                    cesantia1 = (21 * (time + 0)) * salario;
+                                }
+                                else
+                                    cesantia1 = (21 * (time + (months >= 3 && months <= 5 ? 6 : 13))) * salario;
+                                break;
+                            }
+                            else
+                            {
+                                if (months == 0)
+                                {
+                                    cesantia1 = (23 * (time + 0)) * salario;
+                                }
+                                cesantia1 = (23 * (time + (months >= 3 && months <= 5 ? 6 : 13))) * salario;
+                                break;
+                            }
+                    }
+
+
+                }
+
+                //Art 80 C.T. despues de 1992
+                switch (time)
+                {
+                    case 1:
+                    case 2:
+                        break;
+                    case 3:
+                    case 4:
+                    case 5:
+                        cesantia2 = salario * 6;
+                        break;
+                    case 6:
+                    case 7:
+                    case 8:
+                    case 9:
+                    case 10:
+                    case 11:
+                        cesantia2 = salario * 13;
+                        break;
+                    default:
+                        if (time < 60)
+                        {
+                            if (months == 0)
+                            {
+                                cesantia2 = 21  * salario;
+                            }
+                            else
+                                cesantia2 = 21 * (salario + (months >= 3 && months <= 5 ? 6 : 13));
+                            break;
+                        }
+                        else
+                        {
+                            if (months == 0)
+                            {
+                                cesantia2 = salario * 23;
+                            }
+                            else
+                                cesantia2 = 23 * (salario + (months >= 3 && months <= 5 ? 6 : 13));
+                            break;
+                        }
+                }
+            }
+
+            //Vacaciones correspondientes
+            Console.Write("¿Ha tomado las vacaciones correspondientes el ultimo año? (1) Si (2) No ");
+            input = int.Parse(Console.ReadLine());
+            if (input == 2)
+            {
+               switch (time)
+                    {
+                        case 0:
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 4:
+                            break;
+                        case 5:
+                         vacations = ((salario * 6)/ months);
+                            break;
+                        case 6:
+                        vacations = ((salario * 7) / months); break;
+                        case 7:
+                        vacations = ((salario * 8) / months); break;
+                        case 8:
+                        vacations = ((salario * 9) / months); break;
+                        case 9:
+                        vacations = ((salario * 10) / months); break;
+                        case 10:
+                        vacations = ((salario * 11) / months); break;
+                        case 11:
+                        vacations = ((salario * 12) / months); break;
+                        default:
+                            if (time < 60)
+                            {
+                                if (months == 0)
+                                {
+                                 vacations = salario * 14;
+                                }
+                                else
+                                {
+                                vacations = ((salario * 14) / months); 
+                                }
+                            }
+                            else
+                            {
+                                if (months == 0)
+                                {
+                                    vacations = ((salario * 18));
+                                }
+                                else
+                                {
+                                    vacations = ((salario * 18) / months);
+                                }
+                            }
+                        break;
+                }
+            }
+            else
+            {
+                switch (months)
+                {
+                    case 1:
+                    case 2:
+                    case 3:
+                    case 4:
+                        break;
+                    case 5:
+                        vacations = ((salario * 6) / months);
+                        break;
+                    case 6:
+                        vacations = ((salario * 7) / months); break;
+                    case 7:
+                        vacations = ((salario * 8) / months); break;
+                    case 8:
+                        vacations = ((salario * 9) / months); break;
+                    case 9:
+                        vacations = ((salario * 10) / months); break;
+                    case 10:
+                        vacations = ((salario * 11) / months); break;
+                    case 11:
+                        vacations = ((salario * 12) / months); break;
+                    default:
+                        break;
+                }
+
+            }
+
+            //Salario navideño
+            Console.Write("¿Desea incluir salario navideño? (1)Si (2)No ");
+            input = int.Parse(Console.ReadLine());
+            if (input == 1)
+            {
+                ChristmaxSal = (salario*100) / 12;
+            }
+
+            Console.WriteLine($"pre-aviso {preAvised:C2}");
+            Console.WriteLine($"cesantia Art 80 C.T. antes 1992: {cesantia1:C2}");
+            Console.WriteLine($"cesantia Art 80 C.T. despues 1992: {cesantia2:C2}");
+            Console.WriteLine($"Vacaciones tomadas {vacations:C2}");
+            Console.WriteLine($"Salario de navidad {ChristmaxSal:C2}");
+
+            moneyToPay = preAvised + cesantia1 + cesantia2 + ChristmaxSal;
+            return moneyToPay;
+        }
+
+    }
+}
